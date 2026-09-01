@@ -36,8 +36,17 @@ document.addEventListener('DOMContentLoaded', () => {
   const tooltipsAdded = [];
   const maxConcurrentQueries = 100; // Maximum number of concurrent Wikipedia queries
 
-  // Cache for Wikipedia results
-  const wikipediaCache = {};
+  // ── Provider state ──
+  const configuredProvider = window.ANKIPEDIA_DEFAULT_PROVIDER || 'wikipedia';
+  let currentProvider = (configuredProvider === 'jisho' || configuredProvider === 'wikipedia')
+      ? configuredProvider
+      : 'wikipedia';
+
+  // ── Centralized cache (null-prototype to avoid prototype pollution) ──
+  const definitionCache = {
+      wikipedia: Object.create(null),
+      jisho: Object.create(null)
+  };
 
   // These arrays will now be populated from config
   const blockedUnigrams = window.ANKIPEDIA_BLOCKED_UNIGRAMS || [];
@@ -139,52 +148,82 @@ const sanitizeWikipediaContent = (content) => {
   return decodeHTMLEntities(plainText);
 };
 
-const queryWikipedia = async (term, failedTerms) => {
-  if (wikipediaCache[term]) {
-    console.log(`Using cached result for: "${term}"`);
-    return wikipediaCache[term];
-  }
-
+// ── Wikipedia fetcher (pure, no cache) ──
+const queryWikipedia = async (term) => {
   try {
-    // Use the selected language for the Wikipedia API
     const res = await fetch(`https://${WIKI_LANG}.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(term)}`);
     const data = await res.json();
 
     if (res.status === 404 || !data.extract || data.type === 'disambiguation') {
-      failedTerms.push(term);
       return null;
     }
 
-    // Sanitize the Wikipedia content before storing it
     const sanitizedExtract = sanitizeWikipediaContent(data.extract);
     console.log(`Successfully fetched Wikipedia article for: "${term}"`);
 
-    const result = {
+    return {
+      source: 'wikipedia',
       definition: sanitizedExtract,
+      html: '', // no rich HTML for Wikipedia
       thumbnail: data.thumbnail ? data.thumbnail.source : null,
       desktopUrl: data.content_urls?.desktop?.page || null,
     };
-
-    wikipediaCache[term] = result;
-    return result;
   } catch (err) {
-    failedTerms.push(term);
     return null;
   }
 };
 
+// ── Provider router (owns cache) ──
+async function fetchDefinition(term) {
+  const provider = currentProvider;
+  const cacheKey = term.toLowerCase();
+
+  // Check cache
+  if (definitionCache[provider] && definitionCache[provider][cacheKey]) {
+    return definitionCache[provider][cacheKey];
+  }
+
+  let result = null;
+
+  if (provider === 'wikipedia') {
+    result = await queryWikipedia(term);
+  } else if (provider === 'jisho') {
+    // Phase 3 will provide fetchJisho()
+    // For Phase 2, just return null
+    return null;
+  } else {
+    console.warn(`Unknown definition provider: ${provider}`);
+    return null;
+  }
+
+  // Cache successful results only
+  if (result) {
+    definitionCache[provider][cacheKey] = result;
+  }
+
+  return result;
+}
+
+// ── Provider setter (state only – Phase 5 adds reparse) ──
+function setProvider(provider) {
+  if (provider !== 'wikipedia' && provider !== 'jisho') return;
+  currentProvider = provider;
+}
+
 const processTermsInBatches = async (terms) => {
   const results = [];
   const failedTerms = [];
-  const successfulTerms = new Set(); // Track successful Wikipedia queries
+  const successfulTerms = new Set();
 
   for (let i = 0; i < terms.length; i += maxConcurrentQueries) {
     const batch = terms.slice(i, i + maxConcurrentQueries);
     const batchResults = await Promise.all(
       batch.map(term =>
-        queryWikipedia(term, failedTerms).then(result => {
+        fetchDefinition(term).then(result => {
           if (result) {
             successfulTerms.add(term.toLowerCase());
+          } else {
+            failedTerms.push(term);
           }
           return result;
         }).catch(() => {
@@ -197,9 +236,9 @@ const processTermsInBatches = async (terms) => {
   }
 
   if (failedTerms.length > 0) {
-    console.warn('Failed to fetch the following terms from Wikipedia:', failedTerms);
+    console.warn('Failed to fetch the following terms:', failedTerms);
   }
-  console.log('Terms with successful Wikipedia results:', [...successfulTerms]);
+  console.log('Terms with successful results:', [...successfulTerms]);
 
   return { results, successfulTerms };
 };
