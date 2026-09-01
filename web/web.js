@@ -1,3 +1,17 @@
+// ── Scan root resolution
+function getScanRoot() {
+  if (window.ANKIPEDIA_SELECTOR) {
+    try {
+      const el = document.querySelector(window.ANKIPEDIA_SELECTOR);
+      if (el) return el;
+    } catch (e) {
+      console.warn("Invalid ANKIPEDIA_SELECTOR, falling back to default");
+    }
+  }
+
+  return document.querySelector("#qa") || document.body;
+}
+
 document.addEventListener('DOMContentLoaded', () => {
   const style = document.createElement('style');
   style.textContent = `
@@ -32,19 +46,6 @@ document.addEventListener('DOMContentLoaded', () => {
   // Get the Wikipedia language and class name from the injected variables, default to 'en' and 'ankipedia'
   const WIKI_LANG = window.ANKIPEDIA_WIKI_LANG || 'en';
   const ANKIPEDIA_CLASS_NAME = window.ANKIPEDIA_CLASS_NAME || 'ankipedia';
-
-  function getScanRoot() {
-    if (window.ANKIPEDIA_SELECTOR) {
-        try {
-            const el = document.querySelector(window.ANKIPEDIA_SELECTOR);
-            if (el) return el;
-        } catch (e) {
-            console.warn('Invalid ANKIPEDIA_SELECTOR, falling back to default');
-        }
-    }
-
-    return document.querySelector('#qa') || document.body;
-}
 
   const applyTooltips = (ankipediaElement, isBody = false) => {
     const tooltipAppliedFlag = 'tooltips-applied';
@@ -759,8 +760,6 @@ document.addEventListener("contextmenu", function (e) {
 
     e.preventDefault();
 }, true);
-
-// ...existing code...
 
 // Initialize context menu handlers
 function initContextMenus() {
