@@ -2,10 +2,11 @@ from aqt import mw
 from aqt import gui_hooks
 from aqt.reviewer import Reviewer
 from aqt.qt import QAction, QDialog, QVBoxLayout, QLabel, QPushButton, QHBoxLayout
+from aqt.webview import AnkiWebView
+from .jisho_bridge import JishoBridge
 import os
 import json
-import colorsys  # Add this import at the top
-from aqt.webview import AnkiWebView
+import colorsys
 import requests
 
 # Allow Anki to serve our web assets from /_addons/
@@ -290,6 +291,9 @@ def _setup_ankipedia_context_menu():
         pass
 
 _setup_ankipedia_context_menu()
+
+# Initialize the Jisho bridge
+jisho_bridge = JishoBridge()
 
 def show_config_dialog():
     config = mw.addonManager.getConfig(__name__)

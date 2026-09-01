@@ -210,6 +210,62 @@ function setProvider(provider) {
   currentProvider = provider;
 }
 
+// ── Jisho request registry ──
+const jishoRequests = new Map();
+let nextJishoRequestId = 0;
+
+// ── Jisho bridge callback (called from Python) ──
+window.__jisho_resolve = function(requestId, envelope) {
+    if (!jishoRequests.has(requestId)) {
+        console.warn(`Jisho request ${requestId} not found (already resolved or timed out)`);
+        return;
+    }
+
+    const entry = jishoRequests.get(requestId);
+    clearTimeout(entry.timeoutId);
+    jishoRequests.delete(requestId);
+
+    // Resolve the Promise
+    entry.resolve(envelope);
+};
+
+// ── Jisho bridge client ──
+function fetchJisho(term) {
+    return new Promise((resolve) => {
+        const requestId = `jisho_${++nextJishoRequestId}`;
+
+        // Create timeout (5 seconds)
+        const timeoutId = setTimeout(() => {
+            if (jishoRequests.has(requestId)) {
+                jishoRequests.delete(requestId);
+                resolve({ ok: false, data: null, error: 'Client timeout' });
+            }
+        }, 5000);
+
+        // Store pending request
+        jishoRequests.set(requestId, {
+            resolve: resolve,
+            timeoutId: timeoutId
+        });
+
+        // Send request to Python
+        const payload = JSON.stringify({
+            action: 'lookup',
+            request_id: requestId,
+            query: term
+        });
+
+        if (typeof pycmd === 'function') {
+            pycmd('jisho:' + payload);
+        } else {
+            // pycmd not available – immediate failure
+            clearTimeout(timeoutId);
+            jishoRequests.delete(requestId);
+            resolve({ ok: false, data: null, error: 'pycmd not available' });
+        }
+    });
+}
+
 const processTermsInBatches = async (terms) => {
   const results = [];
   const failedTerms = [];
