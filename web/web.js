@@ -543,10 +543,23 @@ const addTooltipSpans = async (termGroups) => {
             const url = reference.getAttribute('data-url');
 
             if (source === 'jisho' && htmlContent) {
-              // Jisho: use rich HTML
               const wrapper = document.createElement('div');
               wrapper.className = 'tooltip-content';
               wrapper.innerHTML = htmlContent;
+
+              if (url) {
+                const linkDiv = document.createElement('div');
+                linkDiv.style.cssText = 'margin-top: 0.5em;';
+                const link = document.createElement('a');
+                link.href = url;
+                link.target = '_blank';
+                link.rel = 'noopener noreferrer';
+                link.style.cssText = 'font-size: 0.85em; color: #0db5be !important;';
+                link.textContent = 'Open in Jisho →';
+                linkDiv.appendChild(link);
+                wrapper.appendChild(linkDiv);
+              }
+
               return wrapper;
             }
 
@@ -573,7 +586,7 @@ const addTooltipSpans = async (termGroups) => {
               link.href = url;
               link.target = '_blank';
               link.rel = 'noopener noreferrer';
-              link.textContent = source === 'jisho' ? 'Open in Jisho →' : 'Read more on Wikipedia';
+              link.textContent = 'Read more on Wikipedia';
               textDiv.appendChild(link);
             }
 
