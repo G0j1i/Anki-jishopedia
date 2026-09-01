@@ -1,0 +1,392 @@
+/* Base styles */
+.ankipediaTerm {
+  display: inline-block;
+  position: relative;
+  white-space: normal;
+  border-bottom: 1px solid #0db5be;
+  cursor: pointer;
+  z-index: 1; /* Base z-index for terms */
+}
+
+/* Tippy box core styles */
+.tippy-box {
+  font-size: 12px;
+  padding: 5px;
+  border-radius: 12px;
+  background-color: #1a1a1a;
+  color: #fff;
+  box-shadow: rgba(149, 157, 165, 0.2) 0px 8px 24px;
+  z-index: 2; /* Ensure only one tooltip is interactive at a time */
+  min-width: 200px;
+  max-width: min(800px, calc(100vw - 40px)) !important;
+  width: 550px;
+  pointer-events: auto;
+  margin-left: 5px; /* Add margin so tooltip never touches window edge */
+}
+
+/* Tippy arrow styles */
+.tippy-arrow {
+  color: #1a1a1a;
+  filter: drop-shadow(rgba(149, 157, 165, 0.2) 0px 8px 24px);
+}
+
+.tippy-box[data-placement^='top'] > .tippy-arrow::before { border-top-color: #1a1a1a; }
+.tippy-box[data-placement^='bottom'] > .tippy-arrow::before { border-bottom-color: #1a1a1a; }
+.tippy-box[data-placement^='left'] > .tippy-arrow::before { border-left-color: #1a1a1a; }
+.tippy-box[data-placement^='right'] > .tippy-arrow::before { border-right-color: #1a1a1a; }
+
+/* Tooltip content layout */
+.tooltip-content {
+  display: flex;
+  gap: 1rem;
+  padding: 1rem;
+  align-items: stretch;  /* Changed to stretch to match heights */
+  border-radius: 12px;
+  pointer-events: auto; /* Only enable pointer events on actual content */
+  z-index: 99999 !important;
+  max-height: 200px;
+}
+
+/* Only apply fixed height when image is present */
+.tooltip-content:has(img):not(img[src="null"]) {
+  height: 200px;
+}
+
+/* Image styles */
+.tooltip-content > img,
+.tooltip-image {
+  width: 40%;
+  height: 200px;  /* Set fixed height */
+  object-fit: contain;
+  background-color: white;
+  border-radius: 8px;
+  flex: 0 0 auto;
+  margin: 0px;;
+  border: 0px; /* No border on tooltip images */
+}
+
+/* Add dynamic sizing for tall images */
+.tooltip-content > img[style*="height"] {
+  width: auto;
+  max-width: 25%;  /* Narrower for tall images */
+}
+
+.tooltip-image {
+  max-height: 210px;
+  overflow: hidden;
+}
+
+img[src="null"] {
+  display: none;
+}
+
+/* Text content styles */
+.tooltip-text {
+  text-transform: none;
+  letter-spacing: 0px;
+  font-size: 12px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;  /* Changed from center to space-between */
+  padding: 0px;
+  font-weight: 400;
+  overflow-y: hidden; /* Changed from auto to hidden */
+}
+
+.tooltip-text p {
+  margin: 0;
+  margin-bottom: 15px; /* Increased from 20px to 30px */
+  padding-right: 10px;
+  max-height: 80%; /* Set max-height relative to container */
+  overflow-y: auto; /* Make paragraph scrollable */
+}
+
+/* Scrollbar styling for tooltip paragraph */
+.tooltip-text p::-webkit-scrollbar {
+  width: 2px;
+}
+
+.tooltip-text p::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.tooltip-text p::-webkit-scrollbar-thumb {
+  background-color: rgba(255, 255, 255, 0.3);
+  border-radius: 1px;
+}
+
+.tooltip-text p::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(255, 255, 255, 0.5);
+}
+
+.tooltip-text a {
+  flex-shrink: 0; /* Prevent button from shrinking */
+  margin: auto 0 0 0;  /* Push button to bottom */
+  background-color: #0db5be;
+  border: none;
+  border-radius: 6px;
+  color: white !important;
+  text-align: center;
+  font-weight: 500;
+  font-size: 0.9em;
+  padding-top: 8px !important;
+  padding-bottom: 8px !important;
+  text-decoration: none;
+  box-shadow: 0 2px 8px rgba(13, 181, 190, 0.2);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.tooltip-text a:hover {
+ text-decoration: none;
+}
+
+.tooltip-text a:active {
+  text-decoration: none;
+ }
+
+/* Container positioning */
+[data-tippy-root] {
+  pointer-events: none; /* Reset to none */
+  position: fixed !important;
+  z-index: 99999;
+}
+
+.tippy-content {
+  width: max-content;
+  max-width: 100%;
+  padding: 5px;
+  overflow-wrap: break-word;
+}
+
+/* Hide other tooltips when one is active */
+.tippy-box[data-state='visible'] {
+  z-index: 100000;
+}
+
+/* Light theme */
+[data-ankipedia-theme="light"] .ankipedia-tooltip {
+    background: white;
+    color: black;
+    border: 1px solid #e0e0e0;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+}
+
+[data-ankipedia-theme="light"] .ankipedia-tooltip a {
+    color: #0db5be;
+}
+
+[data-ankipedia-theme="light"] .tippy-box {
+    background-color: white;
+    color: #444;
+    border: 1px solid #e0e0e0;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+}
+
+[data-ankipedia-theme="light"] .tippy-box[data-placement^='top'] > .tippy-arrow::before { 
+    border-top-color: #e0e0e0; 
+}
+[data-ankipedia-theme="light"] .tippy-box[data-placement^='bottom'] > .tippy-arrow::before { 
+    border-bottom-color: #e0e0e0; 
+}
+[data-ankipedia-theme="light"] .tippy-box[data-placement^='left'] > .tippy-arrow::before { 
+    border-left-color: #e0e0e0; 
+}
+[data-ankipedia-theme="light"] .tippy-box[data-placement^='right'] > .tippy-arrow::before { 
+    border-right-color: #e0e0e0; 
+}
+
+[data-ankipedia-theme="light"] .tippy-arrow {
+  color: #e0e0e0;
+}
+
+/* Dark theme */
+[data-ankipedia-theme="dark"] .ankipedia-tooltip {
+    background: #2c2c2c;
+    color: white;
+    border: 1px solid #404040;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+}
+
+[data-ankipedia-theme="dark"] .ankipedia-tooltip a {
+    color: #0db5be;
+}
+
+[data-ankipedia-theme="dark"] .tippy-box {
+    background-color: #2c2c2c;
+    color: white;
+    border: 1px solid #404040;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+}
+
+[data-ankipedia-theme="dark"] .tippy-arrow {
+    color: #404040;
+}
+
+/* Auto theme - uses system preference */
+@media (prefers-color-scheme: dark) {
+    [data-ankipedia-theme="auto"] .ankipedia-tooltip {
+        background: #2c2c2c;
+        color: white;
+        border: 1px solid #404040;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+    }
+    [data-ankipedia-theme="auto"] .ankipedia-tooltip a {
+        color: #6cb5ff;
+    }
+    [data-ankipedia-theme="auto"] .tippy-box {
+        background-color: #2c2c2c;
+        color: white;
+        border: 1px solid #404040;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+    }
+    
+    [data-ankipedia-theme="auto"] .tippy-arrow {
+        color: #404040;
+    }
+}
+
+@media (prefers-color-scheme: light) {
+    [data-ankipedia-theme="auto"] .ankipedia-tooltip {
+        background: white;
+        color: black;
+        border: 1px solid #e0e0e0;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+    [data-ankipedia-theme="auto"] .ankipedia-tooltip a {
+        color: #0066cc;
+    }
+    [data-ankipedia-theme="auto"] .tippy-box {
+        background-color: white;
+        color: black;
+        border: 1px solid #e0e0e0;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+    
+    [data-ankipedia-theme="auto"] .tippy-box[data-placement^='top'] > .tippy-arrow::before { 
+        border-top-color: white; 
+    }
+    [data-ankipedia-theme="auto"] .tippy-box[data-placement^='bottom'] > .tippy-arrow::before { 
+        border-bottom-color: white; 
+    }
+    [data-ankipedia-theme="auto"] .tippy-box[data-placement^='left'] > .tippy-arrow::before { 
+        border-left-color: white; 
+    }
+    [data-ankipedia-theme="auto"] .tippy-box[data-placement^='right'] > .tippy-arrow::before { 
+        border-right-color: white; 
+    }
+
+    [data-ankipedia-theme="auto"] .tippy-arrow {
+        color: #e0e0e0;
+    }
+}
+
+/* Auto Theme Support */
+[data-ankipedia-theme="auto"] .tippy-box[data-theme~="ankipedia"] {
+  @media (prefers-color-scheme: light) {
+    background-color: white;
+    color: #333;
+    box-shadow: 0 0 20px rgba(0,0,0,0.15);
+  }
+  
+  @media (prefers-color-scheme: dark) {
+    background-color: #1a1a1a;
+    color: #fff;
+    box-shadow: 0 0 20px rgba(0,0,0,0.3);
+  }
+}
+
+[data-ankipedia-theme="auto"] .tippy-box[data-theme~="ankipedia"] .tippy-content {
+  @media (prefers-color-scheme: light) {
+    border: 1px solid #eee;
+  }
+  
+  @media (prefers-color-scheme: dark) {
+    border: 1px solid #333;
+  }
+}
+
+/* Right Click Menu Styling */
+.ankipedia-context-menu {
+  background: white;
+  border: 1px solid #eee;
+  border-radius: 4px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  padding: 4px 0;
+  font-size: 12px;
+  #555
+}
+
+.ankipedia-context-menu button {
+  background: transparent;
+  border: none;
+  color: #555;
+  cursor: pointer;
+  display: block;
+  font-size: 12px;
+  padding: 6px 12px;
+  text-align: left;
+  width: 100%;
+}
+
+.ankipedia-context-menu button:hover {
+  background-color: #f5f5f5;
+}
+
+#ankipedia-block-menu {
+    background: #fff;
+    color: #2a2a2a;
+    border: 1px solid #ccc;
+}
+
+#ankipedia-block-menu div,
+#ankipedia-block-menu a,
+#ankipedia-block-menu button {
+    color: #2a2a2a;
+    background: #fff;
+    text-decoration: none;
+}
+
+#ankipedia-block-menu div:visited,
+#ankipedia-block-menu a:visited,
+#ankipedia-block-menu button:visited {
+    color: #2a2a2a !important;
+    background: #fff !important;
+}
+
+html[data-ankipedia-theme="dark"] #ankipedia-block-menu div,
+html[data-ankipedia-theme="dark"] #ankipedia-block-menu a,
+html[data-ankipedia-theme="dark"] #ankipedia-block-menu button,
+html[data-ankipedia-theme="auto"][data-ankipedia-theme-system="dark"] #ankipedia-block-menu div,
+html[data-ankipedia-theme="auto"][data-ankipedia-theme-system="dark"] #ankipedia-block-menu a,
+html[data-ankipedia-theme="auto"][data-ankipedia-theme-system="dark"] #ankipedia-block-menu button {
+    color: #fff !important;
+    background: #2a2a2a !important;
+}
+
+html[data-ankipedia-theme="dark"] #ankipedia-block-menu div:visited,
+html[data-ankipedia-theme="dark"] #ankipedia-block-menu a:visited,
+html[data-ankipedia-theme="dark"] #ankipedia-block-menu button:visited,
+html[data-ankipedia-theme="auto"][data-ankipedia-theme-system="dark"] #ankipedia-block-menu div:visited,
+html[data-ankipedia-theme="auto"][data-ankipedia-theme-system="dark"] #ankipedia-block-menu a:visited,
+html[data-ankipedia-theme="auto"][data-ankipedia-theme-system="dark"] #ankipedia-block-menu button:visited {
+    color: #fff !important;
+    background: #2a2a2a !important;
+}
+
+html[data-ankipedia-theme="dark"] #ankipedia-block-menu,
+html[data-ankipedia-theme="auto"][data-ankipedia-theme-system="dark"] #ankipedia-block-menu {
+    background: #2a2a2a !important;
+    color: #fff !important;
+    border: 1px solid #4a4a4a !important;
+}
+
+html[data-ankipedia-theme="dark"] #ankipedia-block-menu li,
+html[data-ankipedia-theme="auto"][data-ankipedia-theme-system="dark"] #ankipedia-block-menu li {
+    color: #fff !important;
+}
+
+html[data-ankipedia-theme="dark"] #ankipedia-block-menu li:hover,
+html[data-ankipedia-theme="auto"][data-ankipedia-theme-system="dark"] #ankipedia-block-menu li:hover {
+    background: #3a3a3a !important;
+}

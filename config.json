@@ -1,0 +1,12 @@
+{
+    "wikipedia_lang": "en",
+    "class_name": "ankipedia",
+    "theme": "auto",
+    "blocked_words": [],
+    "blocked_unigrams": [],
+    "border_style": "solid",
+    "border_thickness": 1,
+    "border_color": "#0db5be",
+    "cursor_style": "pointer",
+    "tabList": ["General", "Search", "Languages", "About"]
+}

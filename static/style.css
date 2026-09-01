@@ -1,0 +1,28 @@
+/* ...existing code... */
+
+/* Context menu base style */
+.context-menu {
+    background: #fff;
+    color: #222;
+    border-radius: 6px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    /* ...existing code... */
+}
+
+/* Dark theme context menu */
+body.dark .context-menu,
+.context-menu.dark {
+    background: #23272e; /* Match tooltip dark bg */
+    color: #f3f3f3;
+    border: 1px solid #444;
+    /* ...match tooltip style as needed... */
+}
+
+/* Optional: context menu item hover for dark */
+body.dark .context-menu-item:hover,
+.context-menu.dark .context-menu-item:hover {
+    background: #333b45;
+    color: #fff;
+}
+
+/* ...existing code... */

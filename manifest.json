@@ -1,0 +1,10 @@
+{
+  "name": "Ankipedia",
+  "mod": 0,
+  "author": "William Guy",
+  "description": "",
+  "version": "1.0",
+  "requirements": {
+    "anki": "2.1"
+  }
+}
