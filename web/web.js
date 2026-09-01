@@ -202,10 +202,50 @@ async function fetchDefinition(term) {
   return result;
 }
 
-// ── Provider setter (state only – Phase 5 adds reparse) ──
+// ── Provider setter (Phase 5: with reparse) ──
 function setProvider(provider) {
-  if (provider !== 'wikipedia' && provider !== 'jisho') return;
-  currentProvider = provider;
+    if (provider !== 'wikipedia' && provider !== 'jisho') return;
+    currentProvider = provider;
+    reparseCurrentCard();
+}
+
+// ── Destroy all Tippy instances on .ankipediaTerm elements ──
+function destroyAllTippy(root) {
+    if (!root) return;
+
+    const elements = [];
+    if (root.matches && root.matches('.ankipediaTerm')) {
+        elements.push(root);
+    }
+    elements.push(...root.querySelectorAll('.ankipediaTerm'));
+
+    elements.forEach(el => {
+        if (el._tippy) {
+            el._tippy.destroy();
+            delete el._tippy;
+        }
+    });
+}
+
+// ── Reparse current card (provider switching) ──
+function reparseCurrentCard() {
+    const root = getScanRoot();
+    if (!root) return;
+
+    // 1. Destroy existing Tippy instances
+    destroyAllTippy(root);
+
+    // 2. Unwrap generated spans (preserve text content)
+    root.querySelectorAll('.ankipediaTerm').forEach(el => {
+        const textNode = document.createTextNode(el.textContent);
+        el.parentNode.replaceChild(textNode, el);
+    });
+
+    // 3. Clear the processed flag
+    root.removeAttribute('data-tooltips-applied');
+
+    // 4. Re-scan and re-apply tooltips
+    applyTooltips(root, root === document.body);
 }
 
 // ── Jisho request registry ──
@@ -748,6 +788,18 @@ const addTooltipSpans = async (termGroups) => {
   } else {
     watchForAnkipedia();
   }
+    // ── Keyboard shortcuts ──
+  document.addEventListener('keydown', (e) => {
+      if (!e.ctrlKey) return;
+
+      if (e.key.toLowerCase() === 'd') {
+          e.preventDefault();
+          setProvider('jisho');
+      } else if (e.key.toLowerCase() === 'w') {
+          e.preventDefault();
+          setProvider('wikipedia');
+      }
+  });
 });
 
 // Add theme change listener
