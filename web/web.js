@@ -188,12 +188,10 @@ async function fetchDefinition(term) {
   if (provider === 'wikipedia') {
     result = await queryWikipedia(term);
   } else if (provider === 'jisho') {
-    // Phase 3 will provide fetchJisho()
-    // For Phase 2, just return null
-    return null;
+      result = await fetchJisho(term);
   } else {
-    console.warn(`Unknown definition provider: ${provider}`);
-    return null;
+      console.warn(`Unknown definition provider: ${provider}`);
+      return null;
   }
 
   // Cache successful results only
@@ -234,21 +232,21 @@ function fetchJisho(term) {
     return new Promise((resolve) => {
         const requestId = `jisho_${++nextJishoRequestId}`;
 
-        // Create timeout (5 seconds)
         const timeoutId = setTimeout(() => {
             if (jishoRequests.has(requestId)) {
                 jishoRequests.delete(requestId);
-                resolve({ ok: false, data: null, error: 'Client timeout' });
+                resolve(null); // ← changed: ProviderResult | null only
             }
-        }, 5000);
+        }, 6000);
 
-        // Store pending request
         jishoRequests.set(requestId, {
-            resolve: resolve,
+            resolve: (envelope) => {
+                // Normalize the raw envelope to ProviderResult
+                resolve(normalizeJishoResult(envelope, term));
+            },
             timeoutId: timeoutId
         });
 
-        // Send request to Python
         const payload = JSON.stringify({
             action: 'lookup',
             request_id: requestId,
@@ -258,10 +256,9 @@ function fetchJisho(term) {
         if (typeof pycmd === 'function') {
             pycmd('jisho:' + payload);
         } else {
-            // pycmd not available – immediate failure
             clearTimeout(timeoutId);
             jishoRequests.delete(requestId);
-            resolve({ ok: false, data: null, error: 'pycmd not available' });
+            resolve(null);
         }
     });
 }
@@ -304,6 +301,72 @@ const escapeHTML = (str) => {
   div.textContent = str;
   return div.innerHTML;
 };
+
+// ── Build rich Jisho HTML from normalized data ──
+function buildJishoHTML(first) {
+    const japanese = first.japanese?.[0] || {};
+    const word = escapeHTML(japanese.word || '');
+    const reading = escapeHTML(japanese.reading || '');
+
+    const meanings = first.senses
+        .map(s => escapeHTML((s.english_definitions || []).join(', ')))
+        .filter(Boolean)
+        .join('<br>');
+
+    const parts = escapeHTML(
+        first.senses[0]?.parts_of_speech?.join(', ') || ''
+    );
+
+    let html = `<strong>${word}</strong>`;
+
+    if (reading) {
+        html += ` <span style="color:#888;font-size:0.9em;">(${reading})</span>`;
+    }
+
+    if (meanings) {
+        html += `<br>${meanings}`;
+    }
+
+    if (parts) {
+        html += `<br><em style="color:#999;font-size:0.8em;">${parts}</em>`;
+    }
+
+    return html;
+}
+
+// ── Normalize raw Jisho API response to ProviderResult ──
+function normalizeJishoResult(envelope, term) {
+    // Reject failed envelopes
+    if (!envelope.ok || !envelope.data) {
+        return null;
+    }
+
+    const data = envelope.data;
+    if (!data.data || data.data.length === 0) {
+        return null;
+    }
+
+    const first = data.data[0];
+    const japanese = first.japanese?.[0] || {};
+    const word = japanese.word || term;
+
+    // Build plain-text definition
+    const definition = first.senses
+        .flatMap(s => s.english_definitions || [])
+        .join('; ');
+
+    if (!definition) {
+        return null;
+    }
+
+    return {
+        source: 'jisho',
+        definition: definition,
+        html: buildJishoHTML(first),
+        thumbnail: null,
+        desktopUrl: `https://jisho.org/search/${encodeURIComponent(word)}`
+    };
+}
 
 const addTooltipSpans = async (termGroups) => {
   let updatedHtml = html;
@@ -416,6 +479,8 @@ const addTooltipSpans = async (termGroups) => {
         const tooltipHtml = `<span class="ankipediaTerm underline" 
                   data-term="${escapeHTML(p1)}" 
                   data-tooltip="${escapeHTML(definition)}" 
+                  data-html="${escapeHTML(result.html || '')}"
+                  data-source="${escapeHTML(result.source || 'wikipedia')}"
                   data-thumbnail="${escapeHTML(thumbnail || '')}" 
                   data-url="${escapeHTML(desktopUrl || '')}">
                   ${p1}
@@ -442,56 +507,9 @@ const addTooltipSpans = async (termGroups) => {
   console.log('Tooltips added:', tooltipsAdded);
   console.log('AnkipediaTerms added:', ankipediaTermsAdded); // Log the terms with .ankipediaTerm added
 
-  // Initialize tooltips for the added .ankipediaTerm elements
-  setTimeout(() => {
-    document.querySelectorAll('.ankipediaTerm').forEach(el => {
-      tippy(el, {
-        content: (reference) => {
-          const tooltipContent = reference.getAttribute('data-tooltip') || 'No definition found';
-          const thumbnail = reference.getAttribute('data-thumbnail');
-          const url = reference.getAttribute('data-url');
-
-          const content = document.createElement('div');
-          content.className = 'tooltip-content';
-          
-          if (thumbnail) {
-            const img = document.createElement('img');
-            img.src = thumbnail;
-            img.alt = reference.getAttribute('data-term');
-            content.appendChild(img);
-          }
-
-          const textDiv = document.createElement('div');
-          textDiv.className = 'tooltip-text';
-
-          const text = document.createElement('p');
-          text.textContent = tooltipContent;
-          textDiv.appendChild(text);
-
-          if (url) {
-            const link = document.createElement('a');
-            link.href = url;
-            link.target = '_blank';
-            link.rel = 'noopener noreferrer';
-            link.textContent = 'Read more on Wikipedia';
-            textDiv.appendChild(link);
-          }
-
-          content.appendChild(textDiv);
-          return content;
-        },
-        allowHTML: true,
-        delay: [500, 200], // Add hide delay
-        theme: 'light',
-        interactive: true,
-        placement: 'bottom',
-        hideOnClick: false, // Prevent hiding on click
-      });
-    });
-    
-    // Initialize context menus right after tooltips
-    initContextMenus();
-  }, 0);
+  // Initialize tooltips and context menus for the added .ankipediaTerm elements
+  initTooltips();
+  initContextMenus();
 };
 
     const initTooltips = () => {
@@ -518,29 +536,56 @@ const addTooltipSpans = async (termGroups) => {
         // Initialize Tippy.js for valid elements
         const tooltip = tippy(el, {
           content: (reference) => {
+            const source = reference.getAttribute('data-source') || 'wikipedia';
             const tooltipContent = reference.getAttribute('data-tooltip') || 'No definition found';
+            const htmlContent = reference.getAttribute('data-html') || '';
             const thumbnail = reference.getAttribute('data-thumbnail');
             const url = reference.getAttribute('data-url');
-    
-            const imageTag = thumbnail
-              ? `<img src="${thumbnail}" alt="${reference.getAttribute('data-term')}" style="max-width: 100%; height: auto;" /><br />`
-              : '';
-    
-            // Ensure tooltip content is wrapped in <p class="tooltip-content">
-            const definitionTag = `<p class="tooltip-content" style="margin: 0.5em 0;">${tooltipContent}</p>`;
-    
-            const urlTag = url
-              ? `<div style="margin-top: 0.5em;"><a href="${url}" target="_blank" rel="noopener noreferrer" style="font-size: 0.85em; color: #0db5be !important;">See more on Wikipedia</a></div>`
-              : '';
-    
-            return imageTag + definitionTag + urlTag;
+
+            if (source === 'jisho' && htmlContent) {
+              // Jisho: use rich HTML
+              const wrapper = document.createElement('div');
+              wrapper.className = 'tooltip-content';
+              wrapper.innerHTML = htmlContent;
+              return wrapper;
+            }
+
+            // Wikipedia: existing plain-text rendering
+            const content = document.createElement('div');
+            content.className = 'tooltip-content';
+
+            if (thumbnail) {
+              const img = document.createElement('img');
+              img.src = thumbnail;
+              img.alt = reference.getAttribute('data-term');
+              content.appendChild(img);
+            }
+
+            const textDiv = document.createElement('div');
+            textDiv.className = 'tooltip-text';
+
+            const text = document.createElement('p');
+            text.textContent = tooltipContent;
+            textDiv.appendChild(text);
+
+            if (url) {
+              const link = document.createElement('a');
+              link.href = url;
+              link.target = '_blank';
+              link.rel = 'noopener noreferrer';
+              link.textContent = source === 'jisho' ? 'Open in Jisho →' : 'Read more on Wikipedia';
+              textDiv.appendChild(link);
+            }
+
+            content.appendChild(textDiv);
+            return content;
           },
           allowHTML: true,
-          delay: [500, 200], // Add hide delay
+          delay: [500, 200],
           theme: 'light',
           interactive: true,
           placement: 'bottom',
-          hideOnClick: false, // Prevent hiding on click
+          hideOnClick: false,
         });
       });
     
@@ -559,9 +604,18 @@ const addTooltipSpans = async (termGroups) => {
         // Initialize Tippy.js with 'manual' trigger for valid elements
         const tooltip = tippy(img, {
           content: (reference) => {
+            const source = reference.getAttribute('data-source') || 'wikipedia';
             const tooltipContent = reference.getAttribute('data-tooltip') || 'No definition found';
+            const htmlContent = reference.getAttribute('data-html') || '';
             const thumbnail = reference.getAttribute('data-thumbnail');
             const url = reference.getAttribute('data-url');
+
+            if (source === 'jisho' && htmlContent) {
+              const wrapper = document.createElement('div');
+              wrapper.className = 'tooltip-content';
+              wrapper.innerHTML = htmlContent;
+              return wrapper;
+            }
 
             const content = document.createElement('div');
             content.className = 'tooltip-content';
@@ -585,7 +639,7 @@ const addTooltipSpans = async (termGroups) => {
               link.href = url;
               link.target = '_blank';
               link.rel = 'noopener noreferrer';
-              link.textContent = 'Read more on Wikipedia';
+              link.textContent = source === 'jisho' ? 'Open in Jisho →' : 'Read more on Wikipedia';
               textDiv.appendChild(link);
             }
 
@@ -593,11 +647,11 @@ const addTooltipSpans = async (termGroups) => {
             return content;
           },
           allowHTML: true,
-          delay: [500, 200], // Add hide delay
+          delay: [500, 200],
           theme: 'light',
           interactive: true,
           placement: 'bottom',
-          hideOnClick: false, // Prevent hiding on click
+          hideOnClick: false,
         });
       });
     };
