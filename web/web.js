@@ -33,6 +33,19 @@ document.addEventListener('DOMContentLoaded', () => {
   const WIKI_LANG = window.ANKIPEDIA_WIKI_LANG || 'en';
   const ANKIPEDIA_CLASS_NAME = window.ANKIPEDIA_CLASS_NAME || 'ankipedia';
 
+  function getScanRoot() {
+    if (window.ANKIPEDIA_SELECTOR) {
+        try {
+            const el = document.querySelector(window.ANKIPEDIA_SELECTOR);
+            if (el) return el;
+        } catch (e) {
+            console.warn('Invalid ANKIPEDIA_SELECTOR, falling back to default');
+        }
+    }
+
+    return document.querySelector('#qa') || document.body;
+}
+
   const applyTooltips = (ankipediaElement, isBody = false) => {
     const tooltipAppliedFlag = 'tooltips-applied';
 
@@ -520,54 +533,30 @@ const addTooltipSpans = async (termGroups) => {
   };
 
   const watchForAnkipedia = () => {
-    let ankipediaElement = document.querySelector(`.${ANKIPEDIA_CLASS_NAME}`);
-    if (!ankipediaElement) {
-      console.log(`Ankipedia element (class: ${ANKIPEDIA_CLASS_NAME}) not found, retrying...`);
-      setTimeout(watchForAnkipedia, 500);
-      return;
-    }
-  
-    // If the element is <body>, try to find a main content container inside it
-    let isBody = false;
-    if (ankipediaElement === document.body) {
-      isBody = true;
-      // Try to find a main content container (customize as needed for your card templates)
-      const mainContainer = document.querySelector('.prettify-flashcard') || document.querySelector('#qa');
-      if (mainContainer) {
-        ankipediaElement = mainContainer;
-        isBody = false;
-      }
-    }
-  
-    // If still <body>, allow but skip DOM range checks
-    console.log(`Ankipedia element (class: ${ANKIPEDIA_CLASS_NAME}) found, starting script execution. isBody=${isBody}`);
+    const ankipediaElement = getScanRoot();
+    const isBody = (ankipediaElement === document.body);
+    
+    console.log('Ankipedia scan root:', ankipediaElement);
+    
     applyTooltips(ankipediaElement, isBody);
     
     // Initialize context menus after tooltips are applied
     setTimeout(initContextMenus, 1000);
-  
+
     if (observer) observer.disconnect();
-  
+
     observer = new MutationObserver(() => {
-      let newAnkipedia = document.querySelector(`.${ANKIPEDIA_CLASS_NAME}`);
-      let isBody = false;
-      if (newAnkipedia === document.body) {
-        isBody = true;
-        const mainContainer = document.querySelector('.prettify-flashcard') || document.querySelector('#qa');
-        if (mainContainer) {
-          newAnkipedia = mainContainer;
-          isBody = false;
+        const root = getScanRoot();
+        const isBody = (root === document.body);
+        if (root && root.getAttribute('data-tooltips-applied') !== 'true') {
+            console.log('Detected new content, applying tooltips.');
+            applyTooltips(root, isBody);
         }
-      }
-      if (newAnkipedia && newAnkipedia.getAttribute('data-tooltips-applied') !== 'true') {
-        console.log('Detected new content in .' + ANKIPEDIA_CLASS_NAME + ', applying tooltips.');
-        applyTooltips(newAnkipedia, isBody);
-      }
     });
-  
+
     observer.observe(document.body, {
-      childList: true,
-      subtree: true,
+        childList: true,
+        subtree: true,
     });
   };
 
@@ -607,8 +596,8 @@ if (window.ANKIPEDIA_THEME === "auto") {
 
 // Add context menu for blocking words/unigrams
 document.addEventListener("contextmenu", function (e) {
-    // Only in reviewer
-    if (!window.ANKIPEDIA_CLASS_NAME) return;
+    const root = getScanRoot();
+    if (!root || !root.contains(e.target)) return;
     
     let selection = window.getSelection();
     let selectedText = selection ? selection.toString().trim() : "";
@@ -775,7 +764,7 @@ document.addEventListener("contextmenu", function (e) {
 
 // Initialize context menu handlers
 function initContextMenus() {
-    document.querySelectorAll('.' + window.ANKIPEDIA_CLASS_NAME + 'Term').forEach(term => {
+    document.querySelectorAll('.ankipediaTerm').forEach(term => {
         // Remove existing listeners to prevent duplicates
         term.removeEventListener('contextmenu', handleContextMenu);
         // Add fresh listener

@@ -211,7 +211,7 @@ def on_webview_will_set_content(web_content, context):
     # Also inject custom CSS for styling the terms
     web_content.head += (
         f'<style>'
-        f'.{class_name}Term {{'
+        f'.ankipediaTerm {{'
         f'  border-bottom: {border_thickness}px {border_style} {border_color};'
         f'  cursor: pointer !important;'
         f'  display: inline-block;'
